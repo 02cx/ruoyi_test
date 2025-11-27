@@ -1,34 +1,32 @@
 package org.dromara.system.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.dromara.common.core.constant.SystemConstants;
-import org.dromara.common.core.domain.R;
 import org.dromara.common.core.utils.MapstructUtils;
 import org.dromara.common.core.utils.StringUtils;
-import org.dromara.common.mybatis.annotation.DataColumn;
-import org.dromara.common.mybatis.annotation.DataPermission;
-import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.core.page.PageQuery;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.dromara.system.domain.dto.MsgDTO;
-import org.springframework.boot.actuate.autoconfigure.metrics.MetricsProperties;
-import org.springframework.stereotype.Service;
-import org.dromara.system.domain.bo.RuleBo;
-import org.dromara.system.domain.vo.RuleVo;
+import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.system.domain.Rule;
+import org.dromara.system.domain.bo.RuleBo;
+import org.dromara.system.domain.dto.MsgDTO;
+import org.dromara.system.domain.vo.RuleResultVO;
+import org.dromara.system.domain.vo.RuleVo;
 import org.dromara.system.mapper.RuleMapper;
 import org.dromara.system.service.IRuleService;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
 
-import java.net.URI;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Collection;
 
 /**
  * 规则单表Service业务层处理
@@ -41,9 +39,12 @@ import java.util.Collection;
 @Service
 public class RuleServiceImpl implements IRuleService {
 
-   private final RuleMapper baseMapper;
+    private final RuleMapper baseMapper;
 
-   private final RocketMQTemplate rocketMQTemplate;
+    private final RocketMQTemplate rocketMQTemplate;
+
+    private final ObjectMapper objectMapper;
+
 
 
     /**
@@ -53,8 +54,19 @@ public class RuleServiceImpl implements IRuleService {
      * @return 规则单表
      */
     @Override
-    public RuleVo queryById(Long id){
-        return baseMapper.selectVoById(id);
+    public RuleResultVO queryById(Long id) {
+        RuleVo ruleVo = baseMapper.selectVoById(id);
+        log.info("ruleVo={}", ruleVo);
+        RuleResultVO resultVO = new RuleResultVO();
+        BeanUtils.copyProperties(ruleVo, resultVO);
+        try {
+            Map<String,Object> map = objectMapper.readValue(ruleVo.getExtra(), Map.class);
+            resultVO.setExtra(map);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        return resultVO;
     }
 
     /**
@@ -68,6 +80,8 @@ public class RuleServiceImpl implements IRuleService {
     public TableDataInfo<RuleVo> queryPageList(RuleBo bo, PageQuery pageQuery) {
         LambdaQueryWrapper<Rule> lqw = buildQueryWrapper(bo);
         Page<RuleVo> result = baseMapper.selectVoPage(pageQuery.build(), lqw);
+        log.info("ruleVoList={}", result);
+
         return TableDataInfo.build(result);
     }
 
@@ -80,7 +94,9 @@ public class RuleServiceImpl implements IRuleService {
     @Override
     public List<RuleVo> queryList(RuleBo bo) {
         LambdaQueryWrapper<Rule> lqw = buildQueryWrapper(bo);
-        return baseMapper.selectVoList(lqw);
+        List<RuleVo> ruleVoList = baseMapper.selectVoList(lqw);
+
+        return ruleVoList;
     }
 
     private LambdaQueryWrapper<Rule> buildQueryWrapper(RuleBo bo) {
@@ -128,7 +144,7 @@ public class RuleServiceImpl implements IRuleService {
     /**
      * 保存前的数据校验
      */
-    private void validEntityBeforeSave(Rule entity){
+    private void validEntityBeforeSave(Rule entity) {
         //TODO 做一些数据校验,如唯一约束
     }
 
@@ -141,7 +157,7 @@ public class RuleServiceImpl implements IRuleService {
      */
     @Override
     public Boolean deleteWithValidByIds(Collection<Long> ids, Boolean isValid) {
-        if(isValid){
+        if (isValid) {
             //TODO 做一些业务上的校验,判断是否需要校验
         }
         return baseMapper.deleteByIds(ids) > 0;
@@ -149,6 +165,7 @@ public class RuleServiceImpl implements IRuleService {
 
     /**
      * 生成回调地址
+     *
      * @return
      */
     @Override
@@ -163,19 +180,20 @@ public class RuleServiceImpl implements IRuleService {
     }
 
     /**
-     *  供三方接口回调使用
+     * 供三方接口回调使用
+     *
      * @param platform
      * @param ruleId
      * @param msg
      */
     @Override
-    public void callback(String platform, String ruleId, String msg) {
-        // 构造消息体（可封装为对象，这里用字符串）
-
+    public Boolean callback(String platform, String ruleId, String msg) {
+        // 构造消息体
         MsgDTO msgDTO = new MsgDTO(Long.parseLong(ruleId), Integer.parseInt(platform), msg);
 
         // 发送消息
-        SendResult clueTopic = rocketMQTemplate.syncSend("CLUE_TOPIC", msgDTO);
-        log.info("【MQ发送】发送结果: {}", clueTopic);
+        SendResult sendResult = rocketMQTemplate.syncSend("CLUE_TOPIC", msgDTO);
+        log.info("【MQ发送】发送结果: {}", sendResult);
+        return "SEND_OK".equals(sendResult.getSendStatus().toString());
     }
 }

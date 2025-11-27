@@ -21,8 +21,8 @@ public class ApiController {
      * @return
      */
     @PostMapping("/callback")
-    public R<String> callback(@RequestParam("platform") String platform, @RequestParam("ruleId") String ruleId, @RequestBody String msg) {
-        ruleService.callback(platform, ruleId, msg);
-        return R.ok("success");
+    public R<Boolean> callback(@RequestParam("platform") String platform, @RequestParam("ruleId") String ruleId, @RequestBody String msg) {
+
+        return R.ok("success", ruleService.callback(platform, ruleId, msg));
     }
 }

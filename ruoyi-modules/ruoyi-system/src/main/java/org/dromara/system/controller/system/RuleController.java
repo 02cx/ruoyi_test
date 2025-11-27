@@ -1,28 +1,33 @@
 package org.dromara.system.controller.system;
 
-import java.util.List;
-
-import lombok.RequiredArgsConstructor;
+import cn.hutool.core.util.StrUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.constraints.*;
-import cn.dev33.satoken.annotation.SaCheckPermission;
-import org.dromara.common.mybatis.annotation.DataColumn;
-import org.dromara.common.mybatis.annotation.DataPermission;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
-import org.dromara.common.idempotent.annotation.RepeatSubmit;
-import org.dromara.common.log.annotation.Log;
-import org.dromara.common.web.core.BaseController;
-import org.dromara.common.mybatis.core.page.PageQuery;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.core.validate.AddGroup;
 import org.dromara.common.core.validate.EditGroup;
-import org.dromara.common.log.enums.BusinessType;
 import org.dromara.common.excel.utils.ExcelUtil;
-import org.dromara.system.domain.vo.RuleVo;
-import org.dromara.system.domain.bo.RuleBo;
-import org.dromara.system.service.IRuleService;
+import org.dromara.common.idempotent.annotation.RepeatSubmit;
+import org.dromara.common.log.annotation.Log;
+import org.dromara.common.log.enums.BusinessType;
+import org.dromara.common.mybatis.annotation.DataColumn;
+import org.dromara.common.mybatis.annotation.DataPermission;
+import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
+import org.dromara.common.web.core.BaseController;
+import org.dromara.system.domain.bo.RuleBo;
+import org.dromara.system.domain.vo.RuleResultVO;
+import org.dromara.system.domain.vo.RuleVo;
+import org.dromara.system.service.IRuleService;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 规则单表
@@ -38,6 +43,8 @@ import org.dromara.common.mybatis.core.page.TableDataInfo;
 public class RuleController extends BaseController {
 
     private final IRuleService ruleService;
+
+    private final ObjectMapper objectMapper;
 
 
     /**
@@ -55,8 +62,25 @@ public class RuleController extends BaseController {
    // @SaCheckPermission("system:rule:list")
     @GetMapping("/list")
     @DataPermission(@DataColumn(value = "create_dept"))
-    public TableDataInfo<RuleVo> list(RuleBo bo, PageQuery pageQuery) {
-        return ruleService.queryPageList(bo, pageQuery);
+    public TableDataInfo list(RuleBo bo, PageQuery pageQuery) {
+        TableDataInfo<RuleVo> ruleVoTableDataInfo = ruleService.queryPageList(bo, pageQuery);
+        List<RuleVo> rows = ruleVoTableDataInfo.getRows();
+        List<RuleResultVO> resultRows = rows.stream().map(vo -> {
+            RuleResultVO r = new RuleResultVO();
+            r.setId(vo.getId());
+            r.setRuleName(vo.getRuleName());
+            r.setPhone(vo.getPhone());
+            r.setStatus(vo.getStatus());
+            r.setPlatform(vo.getPlatform());
+            try {
+                r.setExtra(StrUtil.isNotBlank(vo.getExtra()) ? objectMapper.readValue(vo.getExtra(), Map.class) : Map.of());
+            } catch (Exception e) {
+                r.setExtra(Map.of());
+            }
+            return r;
+        }).collect(Collectors.toList());
+
+        return new TableDataInfo(resultRows, ruleVoTableDataInfo.getTotal());
     }
 
     /**
@@ -77,7 +101,7 @@ public class RuleController extends BaseController {
      */
     //@SaCheckPermission("system:rule:query")
     @GetMapping("/{id}")
-    public R<RuleVo> getInfo(@NotNull(message = "主键不能为空")
+    public R<RuleResultVO> getInfo(@NotNull(message = "主键不能为空")
                                      @PathVariable("id") Long id) {
         return R.ok(ruleService.queryById(id));
     }

@@ -1,11 +1,10 @@
 package org.dromara.system.service;
 
-import org.dromara.common.core.domain.R;
-import org.dromara.system.domain.Rule;
-import org.dromara.system.domain.vo.RuleVo;
-import org.dromara.system.domain.bo.RuleBo;
-import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.core.page.PageQuery;
+import org.dromara.common.mybatis.core.page.TableDataInfo;
+import org.dromara.system.domain.bo.RuleBo;
+import org.dromara.system.domain.vo.RuleResultVO;
+import org.dromara.system.domain.vo.RuleVo;
 
 import java.util.Collection;
 import java.util.List;
@@ -24,7 +23,7 @@ public interface IRuleService {
      * @param id 主键
      * @return 规则单表
      */
-    RuleVo queryById(Long id);
+    RuleResultVO queryById(Long id);
 
     /**
      * 分页查询规则单表列表
@@ -81,5 +80,5 @@ public interface IRuleService {
      * @param ruleId
      * @param msg
      */
-    void callback(String platform, String ruleId, String msg);
+    Boolean callback(String platform, String ruleId, String msg);
 }

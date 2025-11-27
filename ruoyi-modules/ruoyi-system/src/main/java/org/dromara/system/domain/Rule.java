@@ -1,9 +1,12 @@
 package org.dromara.system.domain;
 
-import org.dromara.common.tenant.core.TenantEntity;
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.dromara.common.tenant.core.TenantEntity;
 
 import java.io.Serial;
 
@@ -40,6 +43,7 @@ public class Rule extends TenantEntity {
     /**
      * 额外信息（线索）
      */
+    @JsonProperty("extra")
     private String extra;
 
     /**
