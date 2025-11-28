@@ -19,6 +19,7 @@ import org.dromara.system.domain.bo.RuleBo;
 import org.dromara.system.domain.dto.MsgDTO;
 import org.dromara.system.domain.vo.RuleResultVO;
 import org.dromara.system.domain.vo.RuleVo;
+import org.dromara.system.listener.producer.ClueProducer;
 import org.dromara.system.mapper.RuleMapper;
 import org.dromara.system.service.IRuleService;
 import org.springframework.beans.BeanUtils;
@@ -44,6 +45,8 @@ public class RuleServiceImpl implements IRuleService {
     private final RocketMQTemplate rocketMQTemplate;
 
     private final ObjectMapper objectMapper;
+
+    private final ClueProducer clueProducer;
 
 
 
@@ -192,7 +195,7 @@ public class RuleServiceImpl implements IRuleService {
         MsgDTO msgDTO = new MsgDTO(Long.parseLong(ruleId), Integer.parseInt(platform), msg);
 
         // 发送消息
-        SendResult sendResult = rocketMQTemplate.syncSend("CLUE_TOPIC", msgDTO);
+        SendResult sendResult = clueProducer.sendAsyncClueMessage(msgDTO);
         log.info("【MQ发送】发送结果: {}", sendResult);
         return "SEND_OK".equals(sendResult.getSendStatus().toString());
     }
