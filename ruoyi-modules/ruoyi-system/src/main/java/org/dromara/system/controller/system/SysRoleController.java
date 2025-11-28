@@ -75,12 +75,14 @@ public class SysRoleController extends BaseController {
 
     /**
      * 新增角色
+     *  角色不允许使用admin管理标识、roleName、roleKey必须唯一
      */
     @SaCheckPermission("system:role:add")
     @Log(title = "角色管理", businessType = BusinessType.INSERT)
     @RepeatSubmit()
     @PostMapping
     public R<Void> add(@Validated @RequestBody SysRoleBo role) {
+        // 校验不允许修改管理员标识符以及使用admin标识
         roleService.checkRoleAllowed(role);
         if (!roleService.checkRoleNameUnique(role)) {
             return R.fail("新增角色'" + role.getRoleName() + "'失败，角色名称已存在");

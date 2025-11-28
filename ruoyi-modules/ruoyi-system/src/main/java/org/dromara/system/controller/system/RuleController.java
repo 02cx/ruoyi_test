@@ -61,7 +61,7 @@ public class RuleController extends BaseController {
      */
    // @SaCheckPermission("system:rule:list")
     @GetMapping("/list")
-    @DataPermission(@DataColumn(value = "create_dept"))
+    @DataPermission(@DataColumn(value = "dept_id"))
     public TableDataInfo list(RuleBo bo, PageQuery pageQuery) {
         TableDataInfo<RuleVo> ruleVoTableDataInfo = ruleService.queryPageList(bo, pageQuery);
         List<RuleVo> rows = ruleVoTableDataInfo.getRows();

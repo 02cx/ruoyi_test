@@ -174,8 +174,10 @@ public class SysTenantServiceImpl implements ISysTenantService {
         userRoleMapper.insert(userRole);
 
         String defaultTenantId = TenantConstants.DEFAULT_TENANT_ID;
+        // 查询所有的字典类型
         List<SysDictType> dictTypeList = dictTypeMapper.selectList(
             new LambdaQueryWrapper<SysDictType>().eq(SysDictType::getTenantId, defaultTenantId));
+        // 查询所有的字典数据
         List<SysDictData> dictDataList = dictDataMapper.selectList(
             new LambdaQueryWrapper<SysDictData>().eq(SysDictData::getTenantId, defaultTenantId));
         for (SysDictType dictType : dictTypeList) {

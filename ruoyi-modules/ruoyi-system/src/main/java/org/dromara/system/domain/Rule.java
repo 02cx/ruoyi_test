@@ -62,5 +62,10 @@ public class Rule extends TenantEntity {
      */
     private Long platform;
 
+    /**
+     * 部门id
+     */
+    private Long deptId;
+
 
 }
